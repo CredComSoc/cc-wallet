@@ -1,18 +1,25 @@
 import { writable } from 'svelte/store';
 
-interface User {
+export interface User {
   id: string
   pass: string
   node: string
+  nodeName: string
   isLoggedIn: boolean
 }
 
-const createLocalStore = (key, startValue) => {
+const createLocalStore = (key: string, startValue: string) => {
   const {
     subscribe,
     set,
     update
-  } = writable<User>(startValue);
+  } = writable<User>({
+    id: '',
+    pass: '',
+    node: '',
+    nodeName: '',
+    isLoggedIn: false,
+  });
 
   return {
     subscribe,

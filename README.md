@@ -17,3 +17,13 @@ npm run build
 ```
 
 You can preview the production build with `npm run preview`.
+
+## Deploy
+
+You can do sth like:
+
+```bash
+npm run build
+cd build
+scp -r . your-server.com:~/sites/wallet.your-server.com/
+```

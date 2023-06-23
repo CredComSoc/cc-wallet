@@ -3,29 +3,53 @@
 	import { onMount } from 'svelte';
 	import { user } from '../stores/user';
 	import { Icon, ChevronRight, ArrowRightOnRectangle, User } from 'svelte-hero-icons';
+	import { goto } from '$app/navigation';
 
 	let mounted = false;
 
 	onMount(() => {
 		user.useLocalStorage();
-
 		mounted = true;
-		// console.log(localStorage.getItem('country'));
 	});
 
-	function logIn() {
-		console.log({ id: localUserId, pass: localUserPass, node: localUserNode, isLoggedIn: true });
-
+	async function logIn() {
 		localUserIdHasError = localUserId === null || localUserId === '';
 		localUserPassHasError = localUserPass === null || localUserPass === '';
 		localUserNodeHasError = localUserNode === null || localUserNode === '';
 		if (!localUserIdHasError && !localUserNodeHasError && !localUserPassHasError) {
-			user.set({ id: localUserId, pass: localUserPass, node: localUserNode, isLoggedIn: true });
+			const res = await fetch(localUserNode + '/absolutepath', {
+				headers: {
+					'cc-user': localUserId,
+					'cc-auth': localUserPass
+				}
+			});
+			const json = await res.json();
+			const nodeName = json.data.slice(-1);
+
+			user.set({
+				id: localUserId,
+				pass: localUserPass,
+				node: localUserNode,
+				nodeName,
+				isLoggedIn: true
+			});
+
+			localUserId = '';
+			localUserIdHasError = false;
+			localUserPass = '';
+			localUserPassHasError = false;
+			localUserNode = '';
+			localUserNodeHasError = false;
 		}
 	}
 
+	function onKeyUp(event: KeyboardEvent) {
+		if (event.key === 'Enter') logIn();
+	}
+
 	function logOut() {
-		user.set({ id: '', pass: '', node: '', isLoggedIn: false });
+		user.set({ id: '', pass: '', node: '', nodeName: '', isLoggedIn: false });
+		goto('/');
 	}
 
 	let localUserId = '';
@@ -34,29 +58,16 @@
 	let localUserPassHasError = false;
 	let localUserNode = '';
 	let localUserNodeHasError = false;
-
-	let nodeName = '';
-
-	user.subscribe((u) => {
-		if (u.isLoggedIn) {
-			fetch(u.node + '/absolutepath', {
-				headers: {
-					'cc-user': u.id,
-					'cc-auth': u.pass
-				}
-			})
-				.then((res) => res.json())
-				.then((r) => (nodeName = r.data.slice(-1)));
-		}
-	});
 </script>
 
-<div class="m-auto max-w-xl flex items-center h-screen p-4">
+<div class="m-auto max-w-xl flex items-center h-full p-4">
 	{#if $user.isLoggedIn}
 		<div class="w-full h-full bg-white shadow-lg rounded flex flex-col">
 			<div class="h-24 flex items-center p-4">
-				<img src="cc-logo.png" class="h-12 my-2 mx-4" alt="Logo of the Credit Commons" />
-				<div>{nodeName}</div>
+				<a href="/">
+					<img src="/cc-logo.png" class="h-12 my-2 mx-4" alt="Logo of the Credit Commons" />
+				</a>
+				<a href="/"><div class="h-12 flex items-center">{$user.nodeName}</div></a>
 				<div class="flex-grow" />
 				<a href="/"
 					><div class="flex flex-col items-center mx-4">
@@ -75,7 +86,7 @@
 	{:else if !$user.isLoggedIn && mounted}
 		<form class="bg-white shadow-md w-full rounded px-8 pt-6 pb-8 mb-4">
 			<div class="flex justify-center my-6">
-				<img src="cc-logo.png" alt="Logo of the Credit Commons" />
+				<img src="/cc-logo.png" alt="Logo of the Credit Commons" />
 			</div>
 			<div class="mb-4">
 				<label class="block text-gray-700 text-sm font-bold mb-2" for="node"> Node URL </label>
@@ -85,7 +96,8 @@
 					type="text"
 					required
 					bind:value={localUserNode}
-					placeholder="https://thun.cc"
+					on:keyup={onKeyUp}
+					placeholder="http://localhost:8002"
 				/>
 				{#if localUserNodeHasError}
 					<p class="text-red-500 text-xs italic">Invalid node.</p>
@@ -99,6 +111,7 @@
 					type="text"
 					required
 					bind:value={localUserId}
+					on:keyup={onKeyUp}
 					placeholder="User ID"
 				/>
 				{#if localUserIdHasError}
@@ -113,6 +126,7 @@
 					type="password"
 					required
 					bind:value={localUserPass}
+					on:keyup={onKeyUp}
 					placeholder="******************"
 				/>
 				{#if localUserPassHasError}
@@ -131,6 +145,8 @@
 			</div>
 		</form>
 	{:else}
-		<img src="cc-logo.png" alt="cc logo" class="animate-spin" />
+		<div class="absolute top-0 left-0 w-full h-screen flex items-center justify-center">
+			<img src="/cc-logo.png" alt="cc logo" class="animate-bounce" />
+		</div>
 	{/if}
 </div>
